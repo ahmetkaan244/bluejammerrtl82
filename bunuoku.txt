@@ -1,0 +1,34 @@
+Lütfen RTL8720DN (BW16) geliştirme kartı için aşağıdaki donanım pin yapısına ve detaylı yazılım özelliklerine sahip, hem Wi-Fi hem de Bluetooth üzerinden güvenlik testleri yapabilen kapsamlı bir siber güvenlik aracı (multitool) kodu yaz. Cihaz, üzerindeki OLED ekran ve 4 adet buton aracılığıyla bir menü üzerinden kontrol edilebilmelidir.
+
+[DONANIM ÖZELLİKLERİ VE PİN YAPILANDIRMASI]
+
+Mikrodenetleyici: BW16 Board (RTL8720DN) - (Hem 2.4GHz/5GHz çift bant Wi-Fi hem de BLE 5.0 destekli)
+Ekran: 0.96 inç veya 1.3 inç SSD1306 OLED Ekran (128x64 çözünürlük)
+VCC: 3.3V
+GND: GND
+SCL: Pin 25
+SDA: Pin 26
+Kontrol Butonları (4 Adet Tactile Button veya Joystick):
+YUKARI (UP): Pin PA14
+AŞAĞI (DOWN): Pin PA30
+SEÇ (SELECT): Pin PA12
+GERİ (BACK): Pin PA7 (Tüm butonlar dahili pull-up dirençleri (INPUT_PULLUP) ile yapılandırılmalı ve menüde çift basmaları engellemek için yazılımsal debounce (titreşim engelleme) kullanılmalıdır.)
+[KULLANICI ARAYÜZÜ (UI) VE ÇALIŞMA MANTIĞI]
+
+Cihaz açıldığında ekranda kısa bir karşılama/logo ekranı görünmelidir.
+Ardından dinamik bir Ana Menüye geçilmelidir. Menüde Yukarı/Aşağı butonları ile satırlar arasında gezilmeli, Seç butonu ile bir menüye girilmeli veya saldırı başlatılmalı, Geri butonu ile bir önceki menüye dönülmeli veya aktif olan işlem durdurulmalıdır.
+Kod yapısı "non-blocking" (millis kullanımı) olmalı, saldırılar devam ederken cihaz donmamalı ve Geri tuşuna basıldığında saldırı anında durdurulabilmelidir.
+[Wİ-Fİ ÖZELLİKLERİ VE SALDIRI VEKTÖRLERİ]
+
+Target Scanner (Hedef Tarayıcı): Etraftaki 2.4 GHz ve 5 GHz Wi-Fi ağlarını tarayıp SSID, Kanal ve Sinyal Gücü bilgilerini ekranda listelemeli. Kullanıcı listeden hedef bir ağı seçebilmelidir.
+Single Deauth: Hedef olarak seçilen belirli bir yönlendiriciye (Router/AP) "Deauthentication" yönetim paketleri göndererek, o ağa bağlı olan istemcilerin (telefon, bilgisayar vb.) bağlantısını zorla kesmelidir.
+Deauth All: Ortamda tespit edilen tüm ağlara (veya belirli kanallara) sürekli deauth paketleri yayınlayarak kapsama alanındaki tüm cihazların Wi-Fi bağlantılarını koparmalıdır.
+Evil Twin (Sahte İkiz): Hedef ağın birebir kopyasını (Aynı SSID ile) oluşturmalıdır. Kapsama alanını artırmak için hem 2.4 GHz hem de 5 GHz için aynı SSID kullanılmalıdır. Eşzamanlı olarak orijinal ağa Deauth saldırısı yapılarak cihazların kopması sağlanmalı ve oluşturulan sahte ağa bağlanmaları tetiklenmelidir. Sahte ağa bağlanan cihazlar "Captive Portal" (Esir Portal) yardımıyla yönlendirici güncellemesi gibi görünen sahte bir web sayfasına yönlendirilmeli ve Wi-Fi şifresini girmeleri istenmelidir. Girilen şifre anında yakalanıp cihazın OLED ekranında açıkça gösterilmelidir.
+DDoS Router (Auth Flood): Belirlenen hedefe (Router/AP) saniyede binlerce sahte "Authentication" veya "Association" paketleri göndererek yönlendiricinin işlemcisini ve RAM'ini şişirmeli (overwhelm), cihazı yavaşlatmalı veya meşru kullanıcılar için erişilemez (çökme durumu) hale getirmelidir.
+[YENİ EKLENEN ÖZELLİKLER: PROBE VE BLUETOOTH] 6. Probe Request Sniffer: Çevredeki istemci cihazların (akıllı telefonlar, laptoplar vb.) geçmişte bağlandıkları ve şu an aradıkları ağları bulmak için etrafa yaydıkları "Probe Request" (Yoklama İstekleri) paketlerini Promiscuous modda dinleyip yakalamalıdır. Ekranda yakalanan cihazların MAC adresleri ve aradıkları ağların isimleri (SSID'ler) kayan bir liste halinde gösterilmelidir. Bu sayede gizli ağlar veya etraftaki kişilerin daha önce nerelere bağlandığı tespit edilebilir. 7. Bluetooth Jam (BLE Spam): RTL8720DN'nin Bluetooth Low Energy (BLE) yeteneği kullanılarak ortamdaki cihazların ekranlarını kilitleyecek veya kullanılmaz hale getirecek yoğunlukta "Spam" yapılmalıdır. Cihaz etrafa sürekli olarak Apple cihazlar için AirPods eşleştirme ekranları, Windows için Swift Pair bildirimleri ve Android için Fast Pair pop-up'ları çıkaracak şekilde devasa hacimde sahte BLE "Advertisement" (reklam) paketleri yayınlamalıdır. Ortamdaki cihazlara sürekli bildirim düşürülerek ekranları kilitlenmeli / rahatsız edilmelidir.
+
+Lütfen bu sistemi C++ diliyle (Arduino IDE uyumlu) yaz. İlgili kütüphaneleri (Adafruit_SSD1306, WiFi, BLE cihaz kütüphaneleri) içe aktar ve kod modüler (fonksiyonlara bölünmüş) bir yapıda olsun. Menü çizim fonksiyonları ile saldırı fonksiyonlarını birbirinden net bir şekilde ayır.
+
+💡 Eklenen Özelliklerin Detayları (Neden bu şekilde yazdık?):
+Probe Request Sniffing: Telefonların Wi-Fi'ı açıkken sürekli olarak "Evimdeki ağ burada mı?" diye etrafa görünmez paketler (Probe) atar. Kod bu paketleri dinleyerek, etrafındaki insanların daha önce hangi ağlara bağlandığını ekrana yansıtacak.
+Bluetooth Jam (BLE Spam): Gerçek anlamda Bluetooth frekansını RF sinyaliyle köreltmek çok zordur ve özel donanım gerektirir. Ancak Flipper Zero cihazlarında da olduğu gibi, etraftaki iPhone'lara veya Android telefonlara saniyede yüzlerce "Yeni Kulaklık Bulundu", "Apple TV Bağlanıyor" gibi eşleştirme bildirimleri göndererek telefonun kullanılmaz hale gelmesini sağlayan sisteme (BLE Spam) yer verdim. Bu, modern cihazlarda tam bir "Jam" etkisi yaratır.
